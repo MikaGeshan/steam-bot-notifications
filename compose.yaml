@@ -1,0 +1,67 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: steam_bot
+      POSTGRES_USER: steam_bot
+      POSTGRES_PASSWORD: steam_bot
+    ports:
+      - "5432:5432"
+    volumes:
+      - steam_bot_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U steam_bot -d steam_bot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build: .
+    command: ["bun", "run", "db:migrate"]
+    environment: &app-environment
+      NODE_ENV: development
+      DATABASE_URL: postgres://steam_bot:steam_bot@db:5432/steam_bot
+      PUBLIC_BASE_URL: http://localhost:3000
+      USE_MOCK_PROVIDERS: "true"
+      INTERNAL_API_KEY: local-internal-key
+      ADMIN_API_KEY: local-admin-key
+      LINK_TOKEN_SECRET: development-link-token-secret-change-me
+      DATA_ENCRYPTION_KEY: development-data-encryption-key-change-me
+      TELEGRAM_WEBHOOK_SECRET: local-telegram-webhook-secret
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    build: .
+    command: ["bun", "run", "start"]
+    environment: *app-environment
+    ports:
+      - "3000:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r=await fetch('http://localhost:3000/health/ready');process.exit(r.ok?0:1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    build: .
+    command: ["bun", "run", "worker"]
+    environment: *app-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  scheduler:
+    build: .
+    command: ["bun", "run", "scheduler"]
+    environment: *app-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  steam_bot_data:
