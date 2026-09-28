@@ -1,0 +1,32 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/worker",
+      "destination": "/api/worker"
+    },
+    {
+      "source": "/api/scheduler",
+      "destination": "/api/scheduler"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/scheduler",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/worker",
+      "schedule": "* * * * *"
+    }
+  ]
+}

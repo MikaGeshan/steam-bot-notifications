@@ -10,7 +10,12 @@ const boolean = (value: string | undefined, fallback: boolean) => {
   return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase())
 }
 
-export function loadConfig(env: Record<string, string | undefined> = Bun.env) {
+const runtimeEnv = (): Record<string, string | undefined> => {
+  if (typeof Bun !== 'undefined') return Bun.env
+  return process.env
+}
+
+export function loadConfig(env: Record<string, string | undefined> = runtimeEnv()) {
   const nodeEnv = env.NODE_ENV ?? 'development'
   const useMockProviders = boolean(env.USE_MOCK_PROVIDERS, nodeEnv !== 'production')
 
